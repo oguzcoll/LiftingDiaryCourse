@@ -20,6 +20,7 @@ The `/docs` directory contains authoritative guidance on:
 - Best practices specific to this project
 
 - /docs/ui.md
+- /docs/data-fetching.md
 
 **Never write code without first consulting the relevant documentation.** If documentation is missing for a feature you're implementing, consider creating it first or asking the user about expected patterns.
 
