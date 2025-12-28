@@ -308,7 +308,7 @@ export async function getWorkoutWithExercises(workoutId: number) {
 
 For creating, updating, and deleting data, use **Server Actions**, not Server Components.
 
-Server Actions documentation: *(to be created)*
+**See `/docs/data-mutations.md` for complete data mutation guidelines.**
 
 ## Summary
 
