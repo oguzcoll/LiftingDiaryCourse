@@ -445,7 +445,6 @@ export async function deleteWorkout(workoutId: number) {
 import { deleteWorkout } from '@/data/workouts';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
 
 const deleteWorkoutSchema = z.object({
   workoutId: z.number(),
@@ -457,7 +456,7 @@ export async function deleteWorkoutAction(input: { workoutId: number }) {
   await deleteWorkout(workoutId);
 
   revalidatePath('/dashboard');
-  redirect('/dashboard');
+  return { success: true };
 }
 ```
 
@@ -589,6 +588,83 @@ export async function deleteWorkoutExerciseAction(input: DeleteInput) {
 | Create exercise | `/workouts/[id]`, `/exercises` |
 | Update set | `/workouts/[id]` |
 
+## Rule 8: NO redirect() in Server Actions
+
+**Server Actions MUST NOT use the redirect() function. Navigation MUST be handled client-side.**
+
+After a Server Action completes, the client component should handle navigation using `router.push()` or similar client-side routing methods.
+
+### ✅ CORRECT - Client-Side Navigation
+
+```typescript
+// app/workouts/new/actions.ts
+'use server';
+
+import { createWorkout } from '@/data/workouts';
+import { revalidatePath } from 'next/cache';
+
+export async function createWorkoutAction(input: CreateWorkoutInput) {
+  const validated = createWorkoutSchema.parse(input);
+  const workout = await createWorkout(validated);
+
+  revalidatePath('/dashboard');
+
+  // ✅ Return success and let client handle navigation
+  return { success: true, workoutId: workout.id };
+}
+```
+
+```typescript
+// app/workouts/new/page.tsx
+'use client';
+
+import { useRouter } from 'next/navigation';
+import { createWorkoutAction } from './actions';
+
+export default function NewWorkoutPage() {
+  const router = useRouter();
+
+  async function handleSubmit(data: FormData) {
+    const result = await createWorkoutAction({
+      name: data.get('name') as string,
+    });
+
+    if (result.success) {
+      // ✅ Handle navigation on the client
+      router.push('/dashboard');
+    }
+  }
+
+  return <form onSubmit={handleSubmit}>...</form>;
+}
+```
+
+### ❌ INCORRECT - Server-Side redirect()
+
+```typescript
+// ❌ NEVER DO THIS
+'use server';
+
+import { redirect } from 'next/navigation';
+
+export async function createWorkoutAction(input: CreateWorkoutInput) {
+  const workout = await createWorkout(input);
+
+  revalidatePath('/dashboard');
+
+  // ❌ Don't use redirect() in Server Actions
+  redirect('/dashboard');
+}
+```
+
+### Why This Rule Exists
+
+- **Better Error Handling**: Client-side navigation allows you to handle errors before redirecting
+- **Loading States**: You can show loading indicators while the action is processing
+- **Conditional Navigation**: Easy to navigate to different pages based on the result
+- **User Experience**: More control over the navigation flow and user feedback
+- **Progressive Enhancement**: Cleaner separation between server logic and client navigation
+
 ## Common Patterns
 
 ### Pattern 1: Simple Create
@@ -614,7 +690,7 @@ export async function createWorkoutAction(input: { name?: string }) {
   const validated = z.object({ name: z.string().optional() }).parse(input);
   const workout = await createWorkout(validated);
   revalidatePath('/dashboard');
-  redirect(`/workouts/${workout.id}`);
+  return { success: true, workoutId: workout.id };
 }
 ```
 
@@ -767,8 +843,10 @@ export async function createMultipleSets(data: {
 5. ✅ Call helper functions in `/data` directory
 6. ✅ Verify authorization in data helpers
 7. ✅ Revalidate cache after mutations
-8. ❌ Never mutate data in Route Handlers
-9. ❌ Never mutate data in Client Components
-10. ❌ Never query database directly in Server Actions
-11. ❌ Never skip input validation
-12. ❌ Never skip authorization checks
+8. ✅ Handle navigation client-side (NO redirect() in Server Actions)
+9. ❌ Never mutate data in Route Handlers
+10. ❌ Never mutate data in Client Components
+11. ❌ Never query database directly in Server Actions
+12. ❌ Never skip input validation
+13. ❌ Never skip authorization checks
+14. ❌ Never use redirect() in Server Actions

@@ -34,3 +34,25 @@ export async function getUserWorkoutsByDate(date: Date) {
     orderBy: (workouts, { asc }) => [asc(workouts.startedAt)],
   });
 }
+
+export async function createWorkout(data: {
+  name?: string;
+  startedAt: Date;
+}) {
+  const { userId } = await auth();
+
+  if (!userId) {
+    throw new Error('Unauthorized');
+  }
+
+  const [workout] = await db
+    .insert(workouts)
+    .values({
+      userId,
+      name: data.name,
+      startedAt: data.startedAt,
+    })
+    .returning();
+
+  return workout;
+}
